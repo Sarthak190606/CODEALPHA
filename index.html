@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f7fb">
+  <meta name="description" content="A simple, thoughtful translation tool for everyday conversations.">
+  <title>Rudrax — Translation made simple</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f5f7fb;
+      --surface: #ffffff;
+      --surface-soft: #f8f9fc;
+      --text: #182230;
+      --muted: #788394;
+      --border: #e7eaf0;
+      --accent: #635bdf;
+      --accent-hover: #5149ca;
+      --shadow: 0 24px 70px rgba(42, 51, 77, .09);
+    }
+
+    :root.dark {
+      color-scheme: dark;
+      --page: #11141c;
+      --surface: #1a1e29;
+      --surface-soft: #202532;
+      --text: #eef1f7;
+      --muted: #9ba5b5;
+      --border: #303747;
+      --accent: #918aff;
+      --accent-hover: #a39dff;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .26);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(99, 91, 223, .08), transparent 42%),
+        var(--page);
+      color: var(--text);
+      font-family: "DM Sans", sans-serif;
+      transition: background-color .2s ease, color .2s ease;
+    }
+    h1, h2, .brand { font-family: "Manrope", sans-serif; }
+    button, select, textarea { font: inherit; }
+    button:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(99, 91, 223, .35);
+      outline-offset: 2px;
+    }
+    .surface { background: var(--surface); }
+    .surface-soft { background: var(--surface-soft); }
+    .text-main { color: var(--text); }
+    .text-muted { color: var(--muted); }
+    .border-ui { border-color: var(--border); }
+    .card-shadow { box-shadow: var(--shadow); }
+    .icon-button {
+      display: inline-grid;
+      width: 40px;
+      height: 40px;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--muted);
+      transition: background .18s ease, color .18s ease, border-color .18s ease, transform .18s ease;
+    }
+    .icon-button:hover:not(:disabled) {
+      background: var(--surface-soft);
+      color: var(--text);
+      transform: translateY(-1px);
+    }
+    .icon-button:disabled { cursor: not-allowed; opacity: .45; }
+    .language-select {
+      max-width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .language-select option { color: #182230; }
+    textarea {
+      display: block;
+      width: 100%;
+      resize: vertical;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      line-height: 1.7;
+    }
+    textarea::placeholder { color: var(--muted); opacity: .8; }
+    textarea:focus { outline: none; }
+    .translate-button {
+      background: var(--accent);
+      box-shadow: 0 8px 20px rgba(99, 91, 223, .22);
+      transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+    .translate-button:hover:not(:disabled) {
+      background: var(--accent-hover);
+      box-shadow: 0 10px 24px rgba(99, 91, 223, .3);
+      transform: translateY(-1px);
+    }
+    .translate-button:disabled { cursor: wait; opacity: .8; }
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, .4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-message { color: #d04444; }
+    .dark .error-message { color: #ff8989; }
+    .toast { animation: toast-in .2s ease-out; }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translate(-50%, 8px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 sm:px-8">
+    <header class="flex items-center justify-between py-6">
+      <a href="#" class="brand flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-main" aria-label="Rudrax home">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-indigo-600 text-white" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 5h11M9.5 3v2m4 0c-.7 4.7-3.5 7.6-7.5 9m1-5c1.3 2.7 3.8 4.6 6.8 5.4M14 20l4-10 4 10m-6.5-3h5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        rudrax<span class="text-indigo-500">.</span>
+      </a>
+      <button id="theme-toggle" class="icon-button surface" type="button" aria-label="Switch to dark mode" title="Switch theme">
+        <svg id="theme-icon" viewBox="0 0 24 24" fill="none" class="h-[18px] w-[18px]" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <main class="flex flex-1 flex-col justify-center pb-12 pt-7 sm:pb-16 sm:pt-10">
+      <section class="mx-auto mb-9 max-w-2xl text-center sm:mb-11">
+        <div class="mb-4 inline-flex items-center gap-2 rounded-full border border-ui surface px-3 py-1.5 text-xs font-semibold text-muted">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+          YOUR WORDS, ANYWHERE
+        </div>
+        <h1 class="text-3xl font-extrabold tracking-tight text-main sm:text-5xl">Say it in another language.</h1>
+        <p class="mx-auto mt-4 max-w-lg text-sm leading-6 text-muted sm:text-base">
+          Translate a thought, a message, or a whole paragraph. Clear communication starts here.
+        </p>
+      </section>
+
+      <section class="card-shadow surface mx-auto w-full max-w-5xl rounded-3xl border border-ui p-4 sm:p-6" aria-label="Translation tool">
+        <div class="grid grid-cols-1 items-stretch gap-3 md:grid-cols-[1fr_auto_1fr] md:gap-4">
+          <article class="surface-soft flex min-h-[285px] flex-col rounded-2xl border border-ui p-4 sm:p-5">
+            <div class="flex min-h-10 items-center justify-between gap-2 border-b border-ui pb-3">
+              <label for="source-language" class="sr-only">Source language</label>
+              <select id="source-language" class="language-select" aria-label="Source language">
+                <option value="auto">✨ Auto-detect</option>
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="zh-CN">Chinese (Simplified)</option>
+                <option value="zh-TW">Chinese (Traditional)</option>
+                <option value="ja">Japanese</option>
+                <option value="ko">Korean</option>
+                <option value="pt">Portuguese</option>
+                <option value="it">Italian</option>
+                <option value="ru">Russian</option>
+                <option value="ar">Arabic</option>
+                <option value="hi">Hindi</option>
+                <option value="nl">Dutch</option>
+                <option value="tr">Turkish</option>
+                <option value="pl">Polish</option>
+                <option value="sv">Swedish</option>
+                <option value="uk">Ukrainian</option>
+              </select>
+              <button id="speak-source" class="icon-button !h-9 !w-9 border-transparent" type="button" aria-label="Read source text aloud" title="Listen">
+                <svg viewBox="0 0 24 24" fill="none" class="h-[18px] w-[18px]" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <path d="M11 5 6 9H3v6h3l5 4V5Zm4.5 3.5a5 5 0 0 1 0 7m2.5-9.5a9 9 0 0 1 0 12" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            <textarea id="source-text" class="min-h-[180px] flex-1 py-4 text-[15px]" maxlength="5000" placeholder="Type something to translate…" aria-label="Text to translate"></textarea>
+            <div class="flex items-center justify-between border-t border-ui pt-3 text-xs text-muted">
+              <button id="clear-source" type="button" class="font-medium transition hover:text-main">Clear text</button>
+              <span><span id="char-count">0</span> / 5,000</span>
+            </div>
+          </article>
+
+          <div class="flex items-center justify-center md:pt-1">
+            <button id="swap-languages" type="button" class="icon-button surface !h-11 !w-11 rounded-full shadow-sm" aria-label="Swap languages" title="Swap languages">
+              <svg viewBox="0 0 24 24" fill="none" class="h-5 w-5" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M7 7h13l-3-3m3 3-3 3M17 17H4l3 3m-3-3 3-3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <article class="surface-soft flex min-h-[285px] flex-col rounded-2xl border border-ui p-4 sm:p-5">
+            <div class="flex min-h-10 items-center justify-between gap-2 border-b border-ui pb-3">
+              <label for="target-language" class="sr-only">Target language</label>
+              <select id="target-language" class="language-select" aria-label="Target language">
+                <option value="es">Spanish</option>
+                <option value="en">English</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="zh-CN">Chinese (Simplified)</option>
+                <option value="zh-TW">Chinese (Traditional)</option>
+                <option value="ja">Japanese</option>
+                <option value="ko">Korean</option>
+                <option value="pt">Portuguese</option>
+                <option value="it">Italian</option>
+                <option value="ru">Russian</option>
+                <option value="ar">Arabic</option>
+                <option value="hi">Hindi</option>
+                <option value="nl">Dutch</option>
+                <option value="tr">Turkish</option>
+                <option value="pl">Polish</option>
+                <option value="sv">Swedish</option>
+                <option value="uk">Ukrainian</option>
+              </select>
+              <div class="flex items-center gap-1">
+                <button id="speak-result" class="icon-button !h-9 !w-9 border-transparent" type="button" aria-label="Read translation aloud" title="Listen" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" class="h-[18px] w-[18px]" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="M11 5 6 9H3v6h3l5 4V5Zm4.5 3.5a5 5 0 0 1 0 7m2.5-9.5a9 9 0 0 1 0 12" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button id="copy-result" class="icon-button !h-9 !w-9 border-transparent" type="button" aria-label="Copy translation" title="Copy translation" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" class="h-[18px] w-[18px]" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div id="result-text" class="min-h-[180px] flex-1 whitespace-pre-wrap break-words py-4 text-[15px] leading-[1.7] text-muted" role="status" aria-live="polite">Your translation will appear here.</div>
+            <div class="flex items-center justify-between border-t border-ui pt-3 text-xs text-muted">
+              <span id="result-note">Ready when you are</span>
+              <span id="result-count"></span>
+            </div>
+          </article>
+        </div>
+
+        <div class="mt-5 flex flex-col items-center justify-between gap-3 sm:flex-row">
+          <p class="text-xs text-muted">Tip: press <kbd class="rounded-md border border-ui surface px-1.5 py-1 font-sans text-[11px]">Ctrl</kbd> + <kbd class="rounded-md border border-ui surface px-1.5 py-1 font-sans text-[11px]">Enter</kbd> to translate</p>
+          <button id="translate-button" type="button" class="translate-button flex min-h-12 w-full items-center justify-center gap-2.5 rounded-xl px-7 text-sm font-bold text-white sm:w-auto">
+            <svg id="translate-icon" viewBox="0 0 24 24" fill="none" class="h-[18px] w-[18px]" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M4 5h11M9.5 3v2m4 0c-.7 4.7-3.5 7.6-7.5 9m1-5c1.3 2.7 3.8 4.6 6.8 5.4M14 20l4-10 4 10m-6.5-3h5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span id="translate-label">Translate</span>
+          </button>
+        </div>
+      </section>
+
+      <p class="mt-5 text-center text-xs text-muted">Free translation powered by MyMemory · Please avoid sending sensitive information</p>
+    </main>
+
+    <footer class="pb-5 text-center text-xs text-muted">
+      Made for the moments when the right words matter.
+    </footer>
+  </div>
+
+  <div id="toast" class="toast surface card-shadow fixed bottom-6 left-1/2 z-10 hidden -translate-x-1/2 rounded-xl border border-ui px-4 py-2.5 text-sm font-semibold text-main" role="status" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+
+    const sourceText = document.querySelector("#source-text");
+    const sourceLanguage = document.querySelector("#source-language");
+    const targetLanguage = document.querySelector("#target-language");
+    const resultText = document.querySelector("#result-text");
+    const translateButton = document.querySelector("#translate-button");
+    const translateLabel = document.querySelector("#translate-label");
+    const translateIcon = document.querySelector("#translate-icon");
+    const copyButton = document.querySelector("#copy-result");
+    const speakResultButton = document.querySelector("#speak-result");
+    const resultNote = document.querySelector("#result-note");
+    const resultCount = document.querySelector("#result-count");
+    const charCount = document.querySelector("#char-count");
+    const toast = document.querySelector("#toast");
+    let activeRequest;
+    let toastTimer;
+    let sourceWasAutoDetected = false;
+
+    const languageNames = {
+      auto: "Auto-detect", en: "English", es: "Spanish", fr: "French", de: "German",
+      "zh-CN": "Chinese (Simplified)", "zh-TW": "Chinese (Traditional)", ja: "Japanese",
+      ko: "Korean", pt: "Portuguese", it: "Italian", ru: "Russian", ar: "Arabic",
+      hi: "Hindi", nl: "Dutch", tr: "Turkish", pl: "Polish", sv: "Swedish", uk: "Ukrainian"
+    };
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.remove("hidden");
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => toast.classList.add("hidden"), 1800);
+    }
+
+    function setLoading(isLoading) {
+      translateButton.disabled = isLoading;
+      translateLabel.textContent = isLoading ? "Translating…" : "Translate";
+      translateIcon.classList.toggle("hidden", isLoading);
+      let spinner = translateButton.querySelector(".spinner");
+      if (isLoading && !spinner) {
+        spinner = document.createElement("span");
+        spinner.className = "spinner";
+        spinner.setAttribute("aria-hidden", "true");
+        translateButton.prepend(spinner);
+      } else if (!isLoading && spinner) {
+        spinner.remove();
+      }
+    }
+
+    function setResult(text, { isError = false, isTranslation = false } = {}) {
+      resultText.textContent = text;
+      resultText.classList.toggle("text-muted", !isError && !isTranslation);
+      resultText.classList.toggle("text-main", isTranslation);
+      resultText.classList.toggle("error-message", isError);
+      copyButton.disabled = !isTranslation;
+      speakResultButton.disabled = !isTranslation;
+      resultCount.textContent = isTranslation ? `${text.length} characters` : "";
+    }
+
+    function decodeHtmlEntities(text) {
+      const decoder = document.createElement("textarea");
+      decoder.innerHTML = text;
+      return decoder.value;
+    }
+
+    function applyDetectedSourceLanguage(code) {
+      if (!code) return null;
+      const normalizedCode = code.toLowerCase().startsWith("zh")
+        ? (code.toLowerCase().includes("tw") ? "zh-TW" : "zh-CN")
+        : code.split("-")[0].toLowerCase();
+      const supportedOption = Array.from(sourceLanguage.options)
+        .find(option => option.value.toLowerCase() === normalizedCode.toLowerCase());
+
+      if (!supportedOption) return null;
+      sourceLanguage.value = supportedOption.value;
+      sourceWasAutoDetected = true;
+      return supportedOption.value;
+    }
+
+    // Keep the provider-specific request isolated so another translation API can replace it.
+    async function requestTranslation(text, from, to, signal) {
+      async function requestForLanguage(source) {
+        const providerSource = source === "auto" ? "autodetect" : source;
+        const url = new URL("https://api.mymemory.translated.net/get");
+        url.searchParams.set("q", text);
+        url.searchParams.set("langpair", `${providerSource}|${to}`);
+
+        const response = await fetch(url, { signal });
+        if (!response.ok) {
+          throw new Error(`Translation service returned an error (${response.status}). Please try again.`);
+        }
+
+        const data = await response.json();
+        if (data.responseStatus !== 200 || !data.responseData?.translatedText) {
+          const message = data.responseDetails || "The translation service could not translate this text.";
+          throw new Error(message);
+        }
+
+        return {
+          text: decodeHtmlEntities(data.responseData.translatedText),
+          detectedLanguage: data.responseData.detectedLanguage
+        };
+      }
+
+      let result = await requestForLanguage(from);
+      const unchanged = result.text.trim().toLocaleLowerCase() === text.trim().toLocaleLowerCase();
+
+      // MyMemory can echo the input when the selected source language is wrong.
+      // Retry with provider-side detection rather than presenting that as a translation.
+      if (unchanged && from !== "auto") {
+        result = await requestForLanguage("auto");
+        result.usedAutoDetectFallback = true;
+      }
+
+      if (result.text.trim().toLocaleLowerCase() === text.trim().toLocaleLowerCase()) {
+        throw new Error("The service returned the original text. Check the source language or choose Auto-detect, then try again.");
+      }
+
+      return result;
+    }
+
+    async function translate() {
+      const text = sourceText.value.trim();
+      if (!text) {
+        sourceText.focus();
+        showToast("Enter some text to translate first.");
+        return;
+      }
+
+      const from = sourceLanguage.value;
+      const to = targetLanguage.value;
+      if (from !== "auto" && from === to) {
+        showToast("Choose two different languages.");
+        return;
+      }
+
+      if (activeRequest) activeRequest.abort();
+      activeRequest = new AbortController();
+      const request = activeRequest;
+      setLoading(true);
+      resultNote.textContent = "Translation in progress";
+      resultCount.textContent = "";
+      resultText.classList.remove("text-muted", "text-main", "error-message");
+      resultText.innerHTML = '<span class="inline-flex items-center gap-2 text-muted"><span class="spinner !border-indigo-200 !border-t-indigo-600" aria-hidden="true"></span>Translating your text…</span>';
+      copyButton.disabled = true;
+      speakResultButton.disabled = true;
+
+      try {
+        const translation = await requestTranslation(text, from, to, request.signal);
+        if (activeRequest !== request) return;
+        setResult(translation.text, { isTranslation: true });
+        const detectedCode = applyDetectedSourceLanguage(translation.detectedLanguage);
+        if (detectedCode) {
+          const detected = languageNames[detectedCode];
+          const correctionNote = translation.usedAutoDetectFallback ? " (source corrected)" : "";
+          resultNote.textContent = `Detected ${detected} → ${languageNames[to]}${correctionNote}`;
+        } else if (translation.usedAutoDetectFallback) {
+          resultNote.textContent = `Auto-detected source → ${languageNames[to]} (source corrected)`;
+        } else {
+          resultNote.textContent = `${languageNames[from]} → ${languageNames[to]}`;
+        }
+      } catch (error) {
+        if (error.name === "AbortError" || activeRequest !== request) return;
+        setResult(error.message || "Something went wrong. Please try again.", { isError: true });
+        resultNote.textContent = "Translation failed";
+      } finally {
+        if (activeRequest === request) {
+          setLoading(false);
+          activeRequest = null;
+        }
+      }
+    }
+
+    function speak(text, language) {
+      if (!text.trim()) {
+        showToast("There is no text to read aloud.");
+        return;
+      }
+      if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+        showToast("Text-to-speech is not supported in this browser.");
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = language === "auto" ? navigator.language : language;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    }
+
+    sourceText.addEventListener("input", () => {
+      charCount.textContent = sourceText.value.length;
+      if (sourceWasAutoDetected) {
+        sourceLanguage.value = "auto";
+        sourceWasAutoDetected = false;
+      }
+    });
+    sourceLanguage.addEventListener("change", () => {
+      sourceWasAutoDetected = false;
+    });
+    translateButton.addEventListener("click", translate);
+    sourceText.addEventListener("keydown", event => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        translate();
+      }
+    });
+    document.querySelector("#clear-source").addEventListener("click", () => {
+      sourceText.value = "";
+      charCount.textContent = "0";
+      sourceText.focus();
+    });
+    document.querySelector("#swap-languages").addEventListener("click", () => {
+      const previousSource = sourceLanguage.value;
+      const previousTarget = targetLanguage.value;
+      if (previousSource === "auto") {
+        showToast("Choose a source language before swapping.");
+        return;
+      }
+      sourceLanguage.value = previousTarget;
+      targetLanguage.value = previousSource;
+      sourceWasAutoDetected = false;
+      if (resultText.classList.contains("text-main")) {
+        sourceText.value = resultText.textContent;
+        charCount.textContent = sourceText.value.length;
+        setResult("Your translation will appear here.");
+        resultNote.textContent = "Ready when you are";
+      }
+    });
+    document.querySelector("#speak-source").addEventListener("click", () => {
+      speak(sourceText.value, sourceLanguage.value);
+    });
+    speakResultButton.addEventListener("click", () => {
+      speak(resultText.textContent, targetLanguage.value);
+    });
+    copyButton.addEventListener("click", async () => {
+      if (copyButton.disabled) return;
+      try {
+        await navigator.clipboard.writeText(resultText.textContent);
+        showToast("Copied to clipboard!");
+      } catch {
+        showToast("Couldn't copy. Check your browser clipboard permissions.");
+      }
+    });
+
+    document.querySelector("#theme-toggle").addEventListener("click", event => {
+      const isDark = document.documentElement.classList.toggle("dark");
+      event.currentTarget.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+      document.querySelector('meta[name="theme-color"]').content = isDark ? "#11141c" : "#f5f7fb";
+      document.querySelector("#theme-icon").innerHTML = isDark
+        ? '<path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" stroke-linecap="round" stroke-linejoin="round"/>'
+        : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" stroke-linecap="round"/>';
+    });
+  </script>
+</body>
+</html>
